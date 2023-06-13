@@ -2,7 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 // Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram bot token
-const botToken = 'BOT_TOKEN';
+const botToken = 'YOUR_TELEGRAM_BOT_TOKEN';
 const bot = new TelegramBot(botToken, {
     polling: true
 });
@@ -40,21 +40,23 @@ bot.onText(/\/scan (.+)/, async (msg, match) => {
         bot.sendMessage(chatId, `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`);
 
         // Generate the etherscan.io tokenholdings link
-        const etherscanLink = https: //etherscan.io/tokenholdings?a=${walletAddress};
+        const etherscanLink = 'https://etherscan.io/tokenholdings?a=' + walletAddress;
 
-            // Create the button and link markup
-            const inlineKeyboard = {
+        // Create the button and link markup
+        const inlineKeyboard = {
+            reply_markup: {
                 inline_keyboard: [
-                    [{
-                        text: 'View Token Holdings',
-                        url: etherscanLink
-                    }]
-                ],
-            };
+                    [
+                        {
+                            text: 'View Token Holdings',
+                            url: etherscanLink
+                        }
+                    ]
+                ]
+            }
+        };
 
-        bot.sendMessage(chatId, 'Click the button below to view your token holdings:', {
-            reply_markup: inlineKeyboard
-        });
+        bot.sendMessage(chatId, 'Click the button below to view your token holdings:', inlineKeyboard);
     } catch (error) {
         bot.sendMessage(chatId, '❌ An error occurred while fetching the balance. Please try again later.');
     }
