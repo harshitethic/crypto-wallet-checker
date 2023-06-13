@@ -1,0 +1,21 @@
+{
+  "name": "crypto-wallet-checker",
+  "version": "1.0.0",
+  "description": "Telegram bot for fetching Ethereum wallet balance",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "Telegram",
+    "bot",
+    "Ethereum",
+    "etherscan"
+  ],
+  "author": "Harshit Sharma, Harshitethic",
+  "license": "MIT",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.53.0",
+    "axios": "^0.21.1"
+  }
+}
