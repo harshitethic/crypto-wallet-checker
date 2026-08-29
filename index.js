@@ -1,67 +1,114 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
-// Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual Telegram bot token
-const botToken = 'YOUR_TELEGRAM_BOT_TOKEN';
-const bot = new TelegramBot(botToken, {
-    polling: true
-});
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+const etherscanApiUrl = 'https://api.etherscan.io/v2/api';
 
-bot.onText(/\/start/, (msg) => {
+if (!botToken) {
+    throw new Error('Missing TELEGRAM_BOT_TOKEN environment variable.');
+}
+
+if (!etherscanApiKey) {
+    throw new Error('Missing ETHERSCAN_API_KEY environment variable.');
+}
+
+const bot = new TelegramBot(botToken, { polling: true });
+
+const isValidEthereumAddress = (address) => /^0x[a-fA-F0-9]{40}$/.test(address);
+
+const formatEthBalance = (wei) => {
+    const value = BigInt(wei);
+    const whole = value / 1000000000000000000n;
+    const fraction = (value % 1000000000000000000n).toString().padStart(18, '0').replace(/0+$/, '');
+    return fraction ? `${whole}.${fraction}` : whole.toString();
+};
+
+bot.onText(/^\/start(?:@\w+)?$/, async (msg) => {
     const chatId = msg.chat.id;
-    const imageCaption = 'Welcome to the Etherscan Balance Bot!\n/help - Show available commands';
-
-    // Replace 'https://harshitethic.in/eth.jpg' with the actual image URL
-    bot.sendPhoto(chatId, 'https://harshitethic.in/eth.jpg', {
-        caption: imageCaption
-    });
-});
-
-bot.onText(/\/help/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(
-        chatId,
-        `Here are the available commands:
-/start - Start the bot
-/help - Show available commands
-/scan {wallet address} - Fetch the balance for a wallet address`
-    );
-});
-
-bot.onText(/\/scan (.+)/, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const walletAddress = match[1].trim();
+    const imageCaption = 'Welcome to the Ethereum Balance Bot!\n/help - Show available commands';
 
     try {
-        const response = await axios.get(`https://api.etherscan.io/api?module=account&action=balance&address=${walletAddress}`);
-        const balance = response.data.result;
-        const balanceInEth = balance / 1e18;
-
-        bot.sendMessage(chatId, `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`);
-
-        // Generate the etherscan.io tokenholdings link
-        const etherscanLink = 'https://etherscan.io/tokenholdings?a=' + walletAddress;
-
-        // Create the button and link markup
-        const inlineKeyboard = {
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        {
-                            text: 'View Token Holdings',
-                            url: etherscanLink
-                        }
-                    ]
-                ]
-            }
-        };
-
-        bot.sendMessage(chatId, 'Click the button below to view your token holdings:', inlineKeyboard);
+        await bot.sendPhoto(chatId, 'https://harshitethic.in/eth.jpg', {
+            caption: imageCaption
+        });
     } catch (error) {
-        bot.sendMessage(chatId, '❌ An error occurred while fetching the balance. Please try again later.');
+        await bot.sendMessage(chatId, imageCaption);
     }
 });
 
-bot.on('message', (msg) => {
+bot.onText(/^\/help(?:@\w+)?$/, (msg) => {
+    bot.sendMessage(
+        msg.chat.id,
+        'Here are the available commands:\n' +
+        '/start - Start the bot\n' +
+        '/help - Show available commands\n' +
+        '/scan <wallet address> - Fetch the ETH balance for an Ethereum wallet'
+    );
+});
+
+bot.onText(/^\/scan(?:@\w+)?\s+(.+)$/i, async (msg, match) => {
     const chatId = msg.chat.id;
+    const walletAddress = match[1].trim();
+
+    if (!isValidEthereumAddress(walletAddress)) {
+        await bot.sendMessage(
+            chatId,
+            '❌ Invalid Ethereum address. Please provide a 42-character address starting with 0x.'
+        );
+        return;
+    }
+
+    try {
+        const response = await axios.get(etherscanApiUrl, {
+            params: {
+                chainid: 1,
+                module: 'account',
+                action: 'balance',
+                address: walletAddress,
+                tag: 'latest',
+                apikey: etherscanApiKey
+            },
+            timeout: 10000
+        });
+
+        const data = response.data;
+
+        if (data.status !== '1' || !/^\d+$/.test(String(data.result))) {
+            throw new Error(data.message || 'Etherscan returned an invalid response.');
+        }
+
+        const balanceInEth = formatEthBalance(data.result);
+        const etherscanLink = `https://etherscan.io/address/${walletAddress}#tokentxns`;
+
+        await bot.sendMessage(
+            chatId,
+            `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`
+        );
+
+        await bot.sendMessage(chatId, 'Click the button below to view the wallet on Etherscan:', {
+            reply_markup: {
+                inline_keyboard: [[
+                    {
+                        text: 'View on Etherscan',
+                        url: etherscanLink
+                    }
+                ]]
+            }
+        });
+    } catch (error) {
+        console.error('Wallet balance lookup failed:', error.message);
+        await bot.sendMessage(
+            chatId,
+            '❌ Unable to fetch that wallet balance right now. Please verify the address and try again later.'
+        );
+    }
+});
+
+bot.on('polling_error', (error) => {
+    console.error('Telegram polling error:', error.message);
+});
+
+process.on('unhandledRejection', (error) => {
+    console.error('Unhandled promise rejection:', error);
 });

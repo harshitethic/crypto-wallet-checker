@@ -1,49 +1,79 @@
 # Crypto Wallet Checker
 
-Crypto Wallet Checker is a Telegram bot that allows you to fetch the balance of Ethereum wallets and view token holdings using the Etherscan API.
+A small Telegram bot that checks the native ETH balance of an Ethereum wallet and provides an Etherscan link for further inspection.
+
+## What changed in 1.1.0
+
+- Telegram and Etherscan credentials are loaded from environment variables instead of source code.
+- Ethereum addresses are validated before making an API request.
+- Uses Etherscan API V2 with an explicit Ethereum mainnet chain ID.
+- Checks the API response before treating the result as a balance.
+- Uses `BigInt` to avoid precision loss when converting wei to ETH.
+- Adds an HTTP timeout and Telegram polling error handling.
+- Updated dependencies and added a JavaScript syntax check.
+
+## Requirements
+
+- Node.js 18+
+- A Telegram bot token
+- An Etherscan API key
 
 ## Installation
 
-1. Clone the repository:
+```bash
+git clone https://github.com/harshitethic/crypto-wallet-checker.git
+cd crypto-wallet-checker
+npm install
+```
 
-   <code> git clone https://github.com/harshitethic/crypto-wallet-checker.git
-   </code>
+Set the required environment variables.
 
-2. Install dependencies:
+### Linux/macOS
 
-   <code>cd crypto-wallet-checker
-   npm install
-   </code>
+```bash
+export TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+export ETHERSCAN_API_KEY="your-etherscan-api-key"
+```
 
-3. Set up your Telegram bot:
+### Windows PowerShell
 
-   - Create a new Telegram bot by following the instructions <a href="https://core.telegram.org/bots#creating-a-new-bot">here</a>.
-   - Replace <code>'YOUR_TELEGRAM_BOT_TOKEN'</code> in <code>index.js</code> with your actual Telegram bot token.
+```powershell
+$env:TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+$env:ETHERSCAN_API_KEY="your-etherscan-api-key"
+```
 
-4. Run the bot:
+Never commit either credential to the repository.
 
-   <code>node index.js</code>
+## Run
+
+```bash
+npm start
+```
+
+## Check syntax
+
+```bash
+npm run check
+```
 
 ## Usage
 
-1. Start the bot by sending the <code>/start</code> command in your Telegram chat.
+- `/start` - Start the bot
+- `/help` - Show available commands
+- `/scan <wallet address>` - Fetch the ETH balance for an Ethereum mainnet address
 
-2. Use the following commands to interact with the bot:
+Example:
 
-   - <code>/start</code> - Start the bot
-   - <code>/help</code> - Show available commands
-   - <code>/scan {wallet address}</code> - Fetch the balance for a wallet address
+```text
+/scan 0x0000000000000000000000000000000000000000
+```
 
-3. The bot will provide you with the wallet balance in ETH and a button to view token holdings on etherscan.io.
+## Security notes
 
-## Credits
+This bot only needs a public wallet address. **Never send a private key or seed phrase to the bot.**
 
-Crypto Wallet Checker is developed by <a href="https://github.com/harshitethic">Harshit Sharma</a>. It utilizes the following libraries:
-
-- <a href="https://www.npmjs.com/package/node-telegram-bot-api">node-telegram-bot-api</a>
-- <a href="https://www.npmjs.com/package/axios">axios</a>
+The Etherscan API key and Telegram bot token must be supplied through environment variables and should be stored securely in production.
 
 ## License
 
-This project is licensed under the <a href="LICENSE">MIT License</a>.
-
+MIT
