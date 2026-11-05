@@ -87,21 +87,11 @@ bot.onText(/^\/scan(?:@\w+)?\s+(.+)$/i, async (msg, match) => {
         }
 
         const balanceInEth = formatEthBalance(data.result);
-        const etherscanLink = `https://etherscan.io/address/${walletAddress}#tokentxns`;
-
-        await bot.sendMessage(
-            chatId,
-            `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`
-        );
-
-        await bot.sendMessage(chatId, 'Click the button below to view the wallet on Etherscan:', {
+        const etherscanLink = `https://etherscan.io/address/${walletAddress}`;
+        // Keep balance and explorer link together; avoid a second Telegram API call.
+        await bot.sendMessage(chatId, `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`, {
             reply_markup: {
-                inline_keyboard: [[
-                    {
-                        text: 'View on Etherscan',
-                        url: etherscanLink
-                    }
-                ]]
+                inline_keyboard: [[{ text: 'View on Etherscan', url: etherscanLink }]]
             }
         });
     } catch (error) {
