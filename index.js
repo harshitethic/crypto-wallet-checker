@@ -98,3 +98,20 @@ bot.on('polling_error', (error) => {
 process.on('unhandledRejection', (error) => {
     console.error('Unhandled promise rejection:', error);
 });
+
+let shuttingDown = false;
+
+async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    try {
+        await bot.stopPolling();
+        console.log(`Telegram polling stopped after ${signal}.`);
+    } catch (error) {
+        console.error('Failed to stop Telegram polling:', error.message);
+        process.exitCode = 1;
+    }
+}
+
+process.once('SIGINT', () => { void shutdown('SIGINT'); });
+process.once('SIGTERM', () => { void shutdown('SIGTERM'); });
