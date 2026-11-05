@@ -82,8 +82,9 @@ bot.onText(/^\/scan(?:@\w+)?\s+(.+)$/i, async (msg, match) => {
 
         const data = response.data;
 
-        if (data.status !== '1' || !/^\d+$/.test(String(data.result))) {
-            throw new Error(data.message || 'Etherscan returned an invalid response.');
+        if (!data || data.status !== '1' || typeof data.result !== 'string' ||
+            !/^\d+$/.test(data.result)) {
+            throw new Error('Etherscan returned an invalid balance response.');
         }
 
         const balanceInEth = formatEthBalance(data.result);
