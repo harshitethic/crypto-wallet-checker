@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const { isValidEthereumAddress, parseWeiBalance, formatEthBalance } = require('./lib/ethereum');
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
@@ -14,15 +15,6 @@ if (!etherscanApiKey) {
 }
 
 const bot = new TelegramBot(botToken, { polling: true });
-
-const isValidEthereumAddress = (address) => /^0x[a-fA-F0-9]{40}$/.test(address);
-
-const formatEthBalance = (wei) => {
-    const value = BigInt(wei);
-    const whole = value / 1000000000000000000n;
-    const fraction = (value % 1000000000000000000n).toString().padStart(18, '0').replace(/0+$/, '');
-    return fraction ? `${whole}.${fraction}` : whole.toString();
-};
 
 bot.onText(/^\/start(?:@\w+)?$/, async (msg) => {
     const chatId = msg.chat.id;
@@ -82,12 +74,7 @@ bot.onText(/^\/scan(?:@\w+)?\s+(.+)$/i, async (msg, match) => {
 
         const data = response.data;
 
-        if (!data || data.status !== '1' || typeof data.result !== 'string' ||
-            !/^\d+$/.test(data.result)) {
-            throw new Error('Etherscan returned an invalid balance response.');
-        }
-
-        const balanceInEth = formatEthBalance(data.result);
+        const balanceInEth = formatEthBalance(parseWeiBalance(data));
         const etherscanLink = `https://etherscan.io/address/${walletAddress}`;
         // Keep balance and explorer link together; avoid a second Telegram API call.
         await bot.sendMessage(chatId, `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`, {
