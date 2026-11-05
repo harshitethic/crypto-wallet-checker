@@ -48,7 +48,7 @@ bot.onText(/^\/help(?:@\w+)?$/, (msg) => {
 });
 
 // An empty /scan command should explain the expected argument instead of going silent.
-bot.onText(/^\\/scan(?:@\\w+)?\\s*$/i, async (msg) => {
+bot.onText(/^\/scan(?:@\w+)?\s*$/i, async (msg) => {
     await bot.sendMessage(
         msg.chat.id,
         'Usage: /scan 0xYourEthereumWalletAddress'
