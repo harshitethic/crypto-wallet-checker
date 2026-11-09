@@ -104,3 +104,19 @@ The Etherscan API key and Telegram bot token must be supplied through environmen
 ## License
 
 MIT
+
+## Request reliability
+
+Commands addressed to another bot are ignored. Use this bot's username when
+addressing it in a group. Blank scans return one usage reply; extra address
+lines are rejected. Every asynchronous handler contains failed replies.
+
+Concurrent lookups of the same address share a request (case insensitive).
+Only four distinct Etherscan lookups can run at once; excess requests receive
+the retry response. Results are not cached after completion. Requests time out
+after 10 seconds, do not follow redirects, and accept at most 64 KiB.
+
+Shutdown aborts active balance lookups and all callers await the same polling
+shutdown. Error logs contain an allowlisted transport code, never the upstream
+request/error object. Tests use injected clients and cover these paths without
+network requests; they do not prove live provider availability.
