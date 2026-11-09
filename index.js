@@ -1,11 +1,9 @@
 'use strict';
 const {registerBot} = require('./lib/bot');
+const {loadConfig} = require('./lib/config');
 
 function start(env = process.env) {
-    const botToken = env.TELEGRAM_BOT_TOKEN;
-    const apiKey = env.ETHERSCAN_API_KEY;
-    if (!botToken) throw new Error('Missing TELEGRAM_BOT_TOKEN environment variable.');
-    if (!apiKey) throw new Error('Missing ETHERSCAN_API_KEY environment variable.');
+    const {botToken, apiKey} = loadConfig(env);
     const TelegramBot = require('node-telegram-bot-api');
     const http = require('axios');
     const bot = new TelegramBot(botToken, {polling: true});
