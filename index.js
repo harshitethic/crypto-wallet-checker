@@ -1,117 +1,26 @@
-const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
-const { isValidEthereumAddress, parseWeiBalance, formatEthBalance } = require('./lib/ethereum');
+'use strict';
+const {errorCode} = require('./lib/errors');
+const {registerBot} = require('./lib/bot');
+const {loadConfig} = require('./lib/config');
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
-const etherscanApiUrl = 'https://api.etherscan.io/v2/api';
-
-if (!botToken) {
-    throw new Error('Missing TELEGRAM_BOT_TOKEN environment variable.');
-}
-
-if (!etherscanApiKey) {
-    throw new Error('Missing ETHERSCAN_API_KEY environment variable.');
-}
-
-const bot = new TelegramBot(botToken, { polling: true });
-
-bot.onText(/^\/start(?:@\w+)?$/, async (msg) => {
-    const chatId = msg.chat.id;
-    const imageCaption = 'Welcome to the Ethereum Balance Bot!\n/help - Show available commands';
-
-    try {
-        await bot.sendPhoto(chatId, 'https://harshitethic.in/eth.jpg', {
-            caption: imageCaption
-        });
-    } catch (error) {
-        await bot.sendMessage(chatId, imageCaption);
-    }
-});
-
-bot.onText(/^\/help(?:@\w+)?$/, (msg) => {
-    bot.sendMessage(
-        msg.chat.id,
-        'Here are the available commands:\n' +
-        '/start - Start the bot\n' +
-        '/help - Show available commands\n' +
-        '/scan <wallet address> - Fetch the ETH balance for an Ethereum wallet'
-    );
-});
-
-// An empty /scan command should explain the expected argument instead of going silent.
-bot.onText(/^\/scan(?:@\w+)?\s*$/i, async (msg) => {
-    await bot.sendMessage(
-        msg.chat.id,
-        'Usage: /scan 0xYourEthereumWalletAddress'
-    );
-});
-
-bot.onText(/^\/scan(?:@\w+)?\s+(.+)$/i, async (msg, match) => {
-    const chatId = msg.chat.id;
-    const walletAddress = match[1].trim();
-
-    if (!isValidEthereumAddress(walletAddress)) {
-        await bot.sendMessage(
-            chatId,
-            '❌ Invalid Ethereum address. Please provide a 42-character address starting with 0x.'
-        );
-        return;
-    }
-
-    try {
-        const response = await axios.get(etherscanApiUrl, {
-            params: {
-                chainid: 1,
-                module: 'account',
-                action: 'balance',
-                address: walletAddress,
-                tag: 'latest',
-                apikey: etherscanApiKey
-            },
-            timeout: 10000
-        });
-
-        const data = response.data;
-
-        const balanceInEth = formatEthBalance(parseWeiBalance(data));
-        const etherscanLink = `https://etherscan.io/address/${walletAddress}`;
-        // Keep balance and explorer link together; avoid a second Telegram API call.
-        await bot.sendMessage(chatId, `🔍 Wallet Address: ${walletAddress}\n\n💰 Balance: ${balanceInEth} ETH`, {
-            reply_markup: {
-                inline_keyboard: [[{ text: 'View on Etherscan', url: etherscanLink }]]
-            }
-        });
-    } catch (error) {
-        console.error('Wallet balance lookup failed:', error.message);
-        await bot.sendMessage(
-            chatId,
-            '❌ Unable to fetch that wallet balance right now. Please verify the address and try again later.'
-        );
-    }
-});
-
-bot.on('polling_error', (error) => {
-    console.error('Telegram polling error:', error.message);
-});
-
-process.on('unhandledRejection', (error) => {
-    console.error('Unhandled promise rejection:', error);
-});
-
-let shuttingDown = false;
-
-async function shutdown(signal) {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    try {
-        await bot.stopPolling();
-        console.log(`Telegram polling stopped after ${signal}.`);
-    } catch (error) {
-        console.error('Failed to stop Telegram polling:', error.message);
+async function start(env = process.env) {
+    const {botToken, apiKey} = loadConfig(env);
+    const TelegramBot = require('node-telegram-bot-api');
+    const http = require('axios');
+    const bot = new TelegramBot(botToken, {polling: false});
+    const {username} = await bot.getMe();
+    const app = registerBot({bot, http, apiKey, username});
+    const stop = () => app.shutdown().catch((error) => {
+        console.error('Failed to stop polling:', errorCode(error));
         process.exitCode = 1;
-    }
+    });
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+    await bot.startPolling();
+    return app;
 }
-
-process.once('SIGINT', () => { void shutdown('SIGINT'); });
-process.once('SIGTERM', () => { void shutdown('SIGTERM'); });
+if (require.main === module) start().catch((error) => {
+    console.error('Bot startup failed:', errorCode(error));
+    process.exitCode = 1;
+});
+module.exports = {start};

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check lib/ethereum.js",
+    "check": "node --check index.js && node --check lib/bot.js && node --check lib/balance.js && node --check lib/config.js && node --check lib/errors.js && node --check lib/ethereum.js",
     "test": "node --test tests/*.test.js"
   },
   "keywords": [
