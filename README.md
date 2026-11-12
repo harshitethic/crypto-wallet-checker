@@ -117,6 +117,8 @@ the retry response. Results are not cached after completion. Requests time out
 after 10 seconds, do not follow redirects, and accept at most 64 KiB.
 
 Shutdown aborts active balance lookups and all callers await the same polling
-shutdown. Error logs contain an allowlisted transport code, never the upstream
+shutdown. If shutdown occurs before a queued HTTP call begins, the call is
+skipped. If an HTTP adapter ignores cancellation and returns afterward, its
+response is rejected rather than reported as a fresh wallet balance. Error logs contain an allowlisted transport code, never the upstream
 request/error object. Tests use injected clients and cover these paths without
 network requests; they do not prove live provider availability.
